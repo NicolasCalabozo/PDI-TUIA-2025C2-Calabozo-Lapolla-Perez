@@ -46,18 +46,10 @@ def mostrar_analisis_ventana(lista_imagenes: list[np.ndarray], lista_titulos: li
     
 if __name__ == '__main__':
     img = cv2.imread(filename='Imagen_con_detalles_escondidos.tif', flags=cv2.IMREAD_GRAYSCALE)
-    valores_unicos = np.unique(img) #type: ignore
-    print(f'Imagen Original - Valores de intensidad únicos:\n{valores_unicos}')
+    tamaño_ventanas = [(5,5),(20,20),(50,50),(100,100), (150,150),(img.shape[0], img.shape[1])] #type:ignore
     imgs = []
-    imgs.append(ecualizacionLocalHistograma(img, 5, 5))
-    imgs.append(ecualizacionLocalHistograma(img, 20, 20))
-    imgs.append(ecualizacionLocalHistograma(img, 50, 50))
-    imgs.append(ecualizacionLocalHistograma(img, 100, 100))
-    
-    titulos = [
-        'Ventana 5x5',
-        'Ventana 20x20',
-        'Ventana 50x50',
-        'Ventana 100x100'
-    ]
+    titulos = []
+    for m, n in tamaño_ventanas:
+        imgs.append(ecualizacionLocalHistograma(img,m,n))
+        titulos.append(f'Ventana {m}x{n}')
     mostrar_analisis_ventana(imgs,titulos,'Análisis de Ecualización con Variación de Ventana')
