@@ -73,16 +73,78 @@ def encontrar_intersecciones(segmentos_hor, segmentos_ver):
 
 if __name__ == '__main__':
     figura = True
-    segmentos = False
+    segmentos = True
     vertices = True
     img, mascara, vert, hor = detectar_lineas('formulario_01.png', 180, 170, 200)
     img_dummy = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    segmentos_ver = encontrar_segmentos(mascara,vert, 'vertical')
-    segmentos_hor = encontrar_segmentos(mascara,hor, 'horizontal')
+    segmentos_ver = encontrar_segmentos(mascara,vert, 'vertical',30)
+    segmentos_hor = encontrar_segmentos(mascara,hor, 'horizontal',30)
     vertices = encontrar_intersecciones(segmentos_hor, segmentos_ver)
     color_horizontal = (255, 0, 0)  # Azul
     grosor_linea = 1
+    # vertices_ordenados = sorted(vertices, key=lambda p: (int(p[0]), int(p[1])))
+    # print(vertices_ordenados)
+    # # Paso 1: limpiar y ordenar
+    # xs = sorted(list(set(int(x) for x, y in vertices)))  # columnas
+    # ys = sorted(list(set(int(y) for x, y in vertices)))  # filas
+
+    # print(f"X únicos ({len(xs)}): {xs}")
+    # print(f"Y únicos ({len(ys)}): {ys}")
     
+    # M = np.zeros((len(ys), len(xs)), dtype=bool)
+    
+    # for (x, y) in vertices:
+    #     # buscamos el índice correspondiente en xs e ys
+    #     j = xs.index(int(x))  # columna
+    #     i = ys.index(int(y))  # fila
+    #     M[i, j] = True
+    # print("-----------------------------")
+    # print(M)
+    # cuadrados = []
+    # for i in range(len(ys)-1):
+    #     for j in range(len(xs)-1):
+    #         if M[i,j] and M[i,j+1] and M[i+1,j] and M[i+1,j+1]:
+    #             cuadrados.append(((xs[j], ys[i]), (xs[j+1], ys[i+1])))
+
+    # print("Total cuadrados detectados:", cuadrados)
+    
+    # for i in cuadrados:
+    #     cv2.rectangle(img_dummy, i[0], i[1], (0,255,255), 2)
+    # print("-----------------------")
+    # print(segmentos_hor)
+    
+    #Segmentamos recortes de imagen por filas
+    filas = []
+    seg_hor = list(segmentos_hor.keys())
+    for i in range(len(segmentos_hor.keys())-1):
+        filas.append(img[seg_hor[i]:seg_hor[i+1],:])
+    celdas = {}
+    celdas['titulo'] = filas[0]
+    celdas['nombre'] = filas[1][:,21:326]
+    celdas['nombreValor'] = filas[1][:,326:933]
+    celdas['edad'] = filas[2][:,21:326]
+    celdas['edadValor'] = filas[2][:,326:933]
+    celdas['mail'] = filas[3][:,21:326]
+    celdas['mailValor'] = filas[3][:,326:933]
+    celdas['legajo'] = filas[4][:,21:326]
+    celdas['legajoValor'] = filas[4][:,326:933]    
+    celdas['pregunta1'] = filas[6][:,21:326]
+    celdas['pregunta1Si'] = filas[6][2:,326+1:630-2] #filtracion de pixeles   
+    celdas['pregunta1No'] = filas[6][:,630:933]  
+    celdas['pregunta2'] = filas[7][:,21:326]
+    celdas['pregunta2Si'] = filas[7][:,326:630]   
+    celdas['pregunta2No'] = filas[7][:,630:933] 
+    celdas['pregunta3'] = filas[8][:,21:326]
+    celdas['pregunta3Si'] = filas[8][:,326:630]   
+    celdas['pregunta3No'] = filas[8][:,630:933]  
+    celdas['comentario'] = filas[9][:,21:326]
+    celdas['comentarioValor'] = filas[9][:,326:933]
+    
+    
+    print('filas---------')
+    print(segmentos_ver)
+    plt.imshow(cv2.cvtColor(celdas['pregunta1Si'] , cv2.COLOR_BGR2RGB))
+    plt.show() 
     if(segmentos):
         for y, segs in segmentos_hor.items():
             for x_start, x_end in segs:
