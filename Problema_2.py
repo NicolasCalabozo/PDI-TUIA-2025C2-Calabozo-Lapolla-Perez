@@ -6,7 +6,6 @@ import cv2
 if __name__ == '__main__':
     img = cv2.imread(filename='formulario_vacio.png', flags=cv2.IMREAD_GRAYSCALE)
     img_para_dibujar = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) #type: ignore
-    
     #Umbralado para separar el fondo devuelve una mascara binaria True|False del tamaño de la imagen
     #Resulta en una imagen con los colores invertidos, util para detectar lineas
     mascara_umbral = img < 160 #type: ignore
@@ -36,7 +35,6 @@ if __name__ == '__main__':
         #Final entre el ancho máximo de la imagen y la altura de indice de y
         punto_fin = (ancho, int(y))
         cv2.line(img_para_dibujar, punto_inicio, punto_fin, color_rojo, grosor_linea)
-    
     #Graficamos las lineas verticales
     for x in coord_x_lineas:
         punto_inicio = (int(x), 0)
