@@ -28,10 +28,7 @@ def encontrar_segmentos_verticales(mascara_umbral, lineas_x):
         segmentos_en_columna = []
         en_segmento = False
         y_inicio = 0
-
-        # Iteramos sobre los píxeles de la columna
         for y, pixel_es_negro in enumerate(columna_actual):
-            # Transición de blanco a negro -> Inicia un segmento
             if pixel_es_negro and not en_segmento:
                 en_segmento = True
                 y_inicio = y
@@ -58,20 +55,15 @@ def encontrar_segmentos_horizontales(mascara_umbral, lineas_y):
         en_segmento = False
         x_inicio = 0
 
-        # Iteramos sobre los píxeles de la fila
         for x, pixel_es_negro in enumerate(fila_actual):
-            # Transición de blanco a negro -> Inicia un segmento
             if pixel_es_negro and not en_segmento:
                 en_segmento = True
                 x_inicio = x
-            
-            # Transición de negro a blanco -> Termina un segmento
             elif not pixel_es_negro and en_segmento:
                 en_segmento = False
                 x_final = x - 1
                 segmentos_en_fila.append((x_inicio, x_final))
-
-        # Caso especial: si la línea llega hasta el borde derecho de la imagen
+                
         if en_segmento:
             segmentos_en_fila.append((x_inicio, len(fila_actual) - 1))
             
