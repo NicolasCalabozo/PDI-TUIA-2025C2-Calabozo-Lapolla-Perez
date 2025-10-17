@@ -134,10 +134,7 @@ def mostrar_celda_grilla(ax, titulo, imagen):
     ax.set_xticks([])
     ax.set_yticks([])
 
-def mostrar_celda(titulo, imagen):
-    plt.imshow(imagen, cmap='gray', vmin=0, vmax=255)
-    plt.title(titulo)
-    plt.show()
+
 
     
 def mostrar_formulario_desarmado(celdas):
@@ -186,10 +183,10 @@ def mostrar_formulario_desarmado(celdas):
     plt.show()
     
 
-def contar_espacios_y_palabras(celdas, identificador):
+def contar_espacios_y_palabras(celda):
     #Cambiamos el umbral de 180 a 140 porque estabamos perdiendo muchos pixeles de los puntos
     #No logrando la detección del punto como un componente
-    _, binarizada = cv2.threshold(celdas[identificador], 140, 255, cv2.THRESH_BINARY_INV)
+    _, binarizada = cv2.threshold(celda, 140, 255, cv2.THRESH_BINARY_INV)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S) #type: ignore
     componentes = stats[1:]
     
@@ -211,6 +208,7 @@ def contar_espacios_y_palabras(celdas, identificador):
             
     if not distancias:
         return num_labels-1, 1, 0
+    
     if len(distancias) <= 2: 
         ancho_promedio_caracter = np.mean(componentes_ordenados[:, cv2.CC_STAT_WIDTH])
         umbral_heuristico = ancho_promedio_caracter * 0.75
@@ -227,22 +225,161 @@ def contar_espacios_y_palabras(celdas, identificador):
     
     return num_labels-1, cantidad_espacios+1, cantidad_espacios
 
+def validacion_nombre(celda):
+    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
+    if (num_palabras >= 2 and num_caracteres <=25):
+        return "OK"
+    return "MAL"
+    
+def validacion_edad(celda):
+    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
+    if (2 <= num_caracteres <=3 and num_espacios == 0):
+        return "OK"
+    return "MAL"
+
+def validacion_mail(celda):
+    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
+    if (num_palabras == 1 and num_caracteres <=25):
+        return "OK"
+    return "MAL"
+
+def validacion_legajo(celda):
+    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
+    if (num_caracteres == 8 and num_palabras == 1):
+        return "OK"
+    return "MAL"
+
+def validacion_comentario(celda):
+    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
+    if (num_palabras >= 1 and num_caracteres <= 25):
+        return "OK"
+    return "MAL"
+
+def validacion_preguntas(celda_si, celda_no):
+    num_caracteres_si, num_palabras_si, num_espacios_si = contar_espacios_y_palabras(celda_si)
+    num_caracteres_no, num_palabras_no, num_espacios_no = contar_espacios_y_palabras(celda_no)
+    
+    if (num_caracteres_si == 1 and num_caracteres_no == 0):
+        return "OK"
+    
+    if (num_caracteres_si == 0 and num_caracteres_no == 1):
+        return "OK"
+    
+    return "MAL"
+
+def validacion(celdas, id):
+    estados = {}
+    estados['id'] = id
+    if id in ['01','02','03']:
+        estados['tipo_formulario'] = 'A'
+    else:
+        estados ['tipo_formulario'] = 'B'
+    estados['nombre'] = validacion_nombre(celdas['nombre_valor'])
+    estados['edad'] = validacion_edad(celdas['edad_valor'])
+    estados['mail'] = validacion_mail(celdas['mail_valor'])
+    estados['legajo']= validacion_legajo(celdas['legajo_valor'])
+    estados['pregunta1'] = validacion_preguntas(celdas['pregunta1_si'], celdas['pregunta1_no'])
+    estados['pregunta2'] = validacion_preguntas(celdas['pregunta2_si'], celdas['pregunta2_no'])
+    estados['pregunta3'] = validacion_preguntas(celdas['pregunta3_si'], celdas['pregunta3_no'])
+    estados['comentario'] = validacion_comentario(celdas['comentario_valor'])
+    return estados
+
+def estado_formulario(estados):
+    for _, value in estados.items():
+        if value != 'OK':
+            return False
+    return True
+
+def graficar_estado_formulario(celdas_nombre, estados):
+    estado_formularios = []
+    for key in estados.keys():
+        estado_formularios.append(estados[key])
+    fig, ax = plt.subplots(1, len(celdas_nombre))
+    for i, celda in enumerate(celdas_nombre):
+        img = plt.imshow(celda, cmap='gray')
+        ax[i] = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) #type: ignore
+        if(estado_formularios[i]):
+            cv2.circle(img=ax[i], radius=10, center = (celda.shape[0]+30, celda.shape[1]-30))
+        else:
+            pass
+
+def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
+    """
+    Crea una figura que muestra la celda "Nombre y Apellido" de cada formulario
+    con un indicador visual (círculo verde para OK, cruz roja para MAL).
+    
+    Args:
+        lista_celdas_nombre (list): Lista de las imágenes (arrays) de las celdas 'nombre_valor'.
+        lista_estados_generales (list): Lista de strings ('OK' o 'MAL') con el estado de cada formulario.
+    """
+    
+    num_formularios = len(lista_celdas_nombre)
+    
+    # Creamos una grilla de subplots, uno para cada formulario
+    fig, axes = plt.subplots(1, num_formularios, figsize=(num_formularios * 4, 4))
+    
+    # Si solo hay un formulario, 'axes' no es un array, lo convertimos
+    if num_formularios == 1:
+        axes = [axes]
+        
+    # Iteramos sobre los ejes, las celdas y sus estados al mismo tiempo
+    for ax, celda, estado in zip(axes, lista_celdas_nombre, lista_estados_generales):
+        
+        # 1. Convertimos la imagen de escala de grises a BGR (color)
+        #    para poder dibujar indicadores de color.
+        img_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2BGR)
+        
+        # 2. Definimos propiedades para los indicadores (esquina superior derecha)
+        h, w = img_color.shape[:2]
+        centro = (w - 20, 20)  # Coordenadas (x, y)
+        radio = 10
+        grosor = 3
+        color_ok = (0, 255, 0)   # Verde en BGR
+        color_mal = (0, 0, 255)  # Rojo en BGR
+        
+        # 3. Dibujamos el indicador basado en el estado
+        if estado == 'OK':
+            # Dibujamos un círculo verde
+            cv2.circle(img_color, centro, radio, color_ok, grosor)
+        else:
+            # Dibujamos una cruz roja (dos líneas)
+            # Línea 1 \
+            cv2.line(img_color, (centro[0] - radio, centro[1] - radio), 
+                                (centro[0] + radio, centro[1] + radio), color_mal, grosor)
+            # Línea 2 /
+            cv2.line(img_color, (centro[0] - radio, centro[1] + radio), 
+                                (centro[0] + radio, centro[1] - radio), color_mal, grosor)
+            
+        # 4. Mostramos la imagen (ya modificada) en el subplot
+        #    Debemos convertir de BGR (OpenCV) a RGB (Matplotlib)
+        ax.imshow(cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB))
+        ax.set_title(f"Formulario {estado}")
+        ax.axis('off') # Ocultamos los ejes
+
+    plt.suptitle('Resultados de Validación (Apartado C)', fontsize=16)
+    plt.tight_layout()
+    plt.show() 
 if __name__ == '__main__':
     mostrar_pasos = False
-    figura_flag =True
+    figura_flag =False
     segmentos_flag = False
     vertices_flag = False
-    celdas_flag = True
-    
+    celdas_flag = False
+    img_salida_flag = True
+    estados = {}
+    id_formularios = []
+    celdas_nombre = []
     formularios = ['formulario_01.png', 'formulario_02.png', 'formulario_03.png','formulario_04.png','formulario_05.png']
-   
+    plt.figure(figsize=(12, 12))
     for formulario in formularios:
+        id_formulario = formulario.split(sep="_")[1][:2]
+        id_formularios.append(id_formulario)
         img, mascara, vert, hor = detectar_lineas(formulario, 180, 170, 200)
         segmentos_horizontales = encontrar_segmentos(mascara, hor, 'horizontal', 30)
         segmentos_verticales = encontrar_segmentos(mascara, vert, 'vertical', 30)
         vertices_form = encontrar_intersecciones(segmentos_horizontales, segmentos_verticales)
         celdas = encontrar_celdas(img, segmentos_horizontales, segmentos_verticales, margen=2)
-        
+        estados[id_formulario] = validacion(celdas, id_formulario)
         if (mostrar_pasos):
             img_para_dibujar = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) #type: ignore
             if (segmentos_flag):
@@ -261,15 +398,5 @@ if __name__ == '__main__':
             
             if(celdas_flag):
                 mostrar_formulario_desarmado(celdas)
-                
-        campo = 'pregunta3_no'
-        num_caracteres, num_palabras, num_espacios  = contar_espacios_y_palabras(celdas,campo)
-        print('----------------------------------')
-        print(f'Formulario: {formulario}')
-        print(f'Campo: {campo}')
-        print('N° Caracteres: ', num_caracteres)
-        print('N° Palabras: ', num_palabras)
-        print('N° Espacios: ', num_espacios)
-        
             
-    
+                        
