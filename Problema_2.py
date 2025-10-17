@@ -254,48 +254,6 @@ if __name__ == '__main__':
     vertices_flag = False
     celdas_flag = True
     
-    img, mascara, vert, hor = detectar_lineas(
-        'formulario_01.png', 180, 170, 200)
-    img_dummy = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    segmentos_ver = encontrar_segmentos(mascara, vert, 'vertical', 30)
-    segmentos_hor = encontrar_segmentos(mascara, hor, 'horizontal', 30)
-    vertices = encontrar_intersecciones(segmentos_hor, segmentos_ver)
-    celdas = encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2)
-    color_horizontal = (255, 0, 0)  # Azul
-    grosor_linea = 1
-    
-    if (segmentos_flag):
-        for y, segs in segmentos_hor.items():
-            for x_start, x_end in segs:
-                cv2.line(img_dummy, (x_start, y), (x_end, y),
-                         color_horizontal, grosor_linea)
-
-        color_vertical = (0, 0, 255)  # Rojo
-        for x, segs in segmentos_ver.items():
-            for y_start, y_end in segs:
-                cv2.line(img_dummy, (x, y_start), (x, y_end),
-                         color_vertical, grosor_linea)
-    if (vertices_flag):
-        for x, y in vertices:
-            cv2.circle(img_dummy, (x, y), radius=3,
-                       color=(0, 255, 0), thickness=-1)
-
-    if (figura_flag):
-        plt.figure(figsize=(12, 12))
-        plt.imshow(cv2.cvtColor(img_dummy, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
-    
-    if(celdas_flag):
-        mostrar_formulario_desarmado(celdas)
-    
-    b = extraer_componentes(binarizar_celda(celdas['nombre_valor']))
-    palabras = contar_palabras_y_chars(b[0])
-    print(f'stats: {b[0]}')
-    print(f"Número de palabras en 'nombre_valor': {palabras[0]}")
-    print(f"Número de caracteres en 'nombre_valor': {palabras[1]}")
-    print(f"Cortes de palabras (índices de caracteres): {palabras}")
-    celdas_flag = False
     formularios = ['formulario_01.png', 'formulario_02.png', 'formulario_03.png','formulario_04.png','formulario_05.png']
    
     for formulario in formularios:
@@ -323,5 +281,12 @@ if __name__ == '__main__':
             
             if(celdas_flag):
                 mostrar_formulario_desarmado(celdas)
+        b = extraer_componentes(binarizar_celda(celdas['mail_valor']))
+        palabras = contar_palabras_y_chars(b[0])
+        print('----------------------------------')
+        print(f'Formulario: {formulario}')
+        print(f"Número de palabras en 'nombre_valor': {palabras[0]}")
+        print(f"Número de caracteres en 'nombre_valor': {palabras[1]}")
+        print(f"Cortes de palabras (índices de caracteres): {palabras}")
             
     
