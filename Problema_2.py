@@ -24,7 +24,7 @@ def encontrar_segmentos(mascara_umbral, coordenadas, eje='horizontal', min_largo
     filtrando aquellos que son más cortos que min_largo.
     """
     segmentos_dict = {}
-
+    linea_actual = []
     for coord in coordenadas:
         if eje == 'horizontal':
             linea_actual = mascara_umbral[coord, :]
@@ -47,8 +47,7 @@ def encontrar_segmentos(mascara_umbral, coordenadas, eje='horizontal', min_largo
             final = len(linea_actual) - 1
             if (final - inicio) >= min_largo:
                 segmentos_en_linea.append((inicio, final))
-
-        # Opcional: solo añadimos la coordenada al diccionario si encontramos segmentos válidos
+                
         if segmentos_en_linea:
             segmentos_dict[coord] = segmentos_en_linea
 
@@ -73,6 +72,19 @@ def encontrar_intersecciones(segmentos_hor, segmentos_ver):
 
     return vertices
 
+def dibujar_segmentos_horizontales(imagen, segmentos_hor, color=(255, 0, 0), grosor=2):
+    for y, segs in segmentos_hor.items():
+        for x_inicio, x_fin in segs:
+            cv2.line(imagen, (x_inicio, y), (x_fin, y), color, grosor)
+
+def dibujar_segmentos_verticales(imagen, segmentos_ver, color=(0, 0, 255), grosor=2):
+    for x, segs in segmentos_ver.items():
+        for y_inicio, y_fin in segs:
+            cv2.line(imagen, (x, y_inicio), (x, y_fin), color, grosor)
+
+def dibujar_vertices(imagen, vertices, color=(0, 255, 0), radio=3):
+    for x, y in vertices:
+        cv2.circle(imagen, (x, y), radius=radio, color=color, thickness=-1) # thickness=-1 rellena el círculo
 
 def encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2):
     filas = []
@@ -115,12 +127,18 @@ def encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2):
 
     return celdas
 
-def mostrar_celda(ax, titulo, imagen):
+def mostrar_celda_grilla(ax, titulo, imagen):
     ax.imshow(imagen, cmap='gray', vmin=0, vmax=255)
     ax.set_title(titulo)
     ax.axis('on')
     ax.set_xticks([])
     ax.set_yticks([])
+
+def mostrar_celda(titulo, imagen):
+    plt.imshow(imagen, cmap='gray', vmin=0, vmax=255)
+    plt.title(titulo)
+    plt.show()
+
     
 def mostrar_formulario_desarmado(celdas):
     """
@@ -132,35 +150,35 @@ def mostrar_formulario_desarmado(celdas):
         for ax in ax_row:
             ax.axis('off')
 
-    mostrar_celda(axs[1, 0], 'nombre', celdas['nombre'])
+    mostrar_celda_grilla(axs[1, 0], 'nombre', celdas['nombre'])
     ax_nombre_valor = plt.subplot2grid((10, 3), (1, 1), colspan=2)
-    mostrar_celda(ax_nombre_valor, 'nombre_valor', celdas['nombre_valor'])
+    mostrar_celda_grilla(ax_nombre_valor, 'nombre_valor', celdas['nombre_valor'])
     
-    mostrar_celda(axs[2, 0], 'edad', celdas['edad'])
+    mostrar_celda_grilla(axs[2, 0], 'edad', celdas['edad'])
     ax_edad_valor = plt.subplot2grid((10, 3), (2, 1), colspan=2)
-    mostrar_celda(ax_edad_valor, 'edad_valor', celdas['edad_valor'])
+    mostrar_celda_grilla(ax_edad_valor, 'edad_valor', celdas['edad_valor'])
 
-    mostrar_celda(axs[3, 0], 'mail', celdas['mail'])
+    mostrar_celda_grilla(axs[3, 0], 'mail', celdas['mail'])
     ax_mail_valor = plt.subplot2grid((10, 3), (3, 1), colspan=2)
-    mostrar_celda(ax_mail_valor, 'mail_valor', celdas['mail_valor'])
-    mostrar_celda(axs[4, 0], 'legajo', celdas['legajo'])
+    mostrar_celda_grilla(ax_mail_valor, 'mail_valor', celdas['mail_valor'])
+    mostrar_celda_grilla(axs[4, 0], 'legajo', celdas['legajo'])
     ax_legajo_valor = plt.subplot2grid((10, 3), (4, 1), colspan=2)
-    mostrar_celda(ax_legajo_valor, 'legajo_valor', celdas['legajo_valor'])
-    mostrar_celda(axs[6, 0], 'pregunta1', celdas['pregunta1'])
-    mostrar_celda(axs[6, 1], 'pregunta1_si', celdas['pregunta1_si'])
-    mostrar_celda(axs[6, 2], 'pregunta1_no', celdas['pregunta1_no'])
+    mostrar_celda_grilla(ax_legajo_valor, 'legajo_valor', celdas['legajo_valor'])
+    mostrar_celda_grilla(axs[6, 0], 'pregunta1', celdas['pregunta1'])
+    mostrar_celda_grilla(axs[6, 1], 'pregunta1_si', celdas['pregunta1_si'])
+    mostrar_celda_grilla(axs[6, 2], 'pregunta1_no', celdas['pregunta1_no'])
 
-    mostrar_celda(axs[7, 0], 'pregunta2', celdas['pregunta2'])
-    mostrar_celda(axs[7, 1], 'pregunta2_si', celdas['pregunta2_si'])
-    mostrar_celda(axs[7, 2], 'pregunta2_no', celdas['pregunta2_no'])
+    mostrar_celda_grilla(axs[7, 0], 'pregunta2', celdas['pregunta2'])
+    mostrar_celda_grilla(axs[7, 1], 'pregunta2_si', celdas['pregunta2_si'])
+    mostrar_celda_grilla(axs[7, 2], 'pregunta2_no', celdas['pregunta2_no'])
     
-    mostrar_celda(axs[8, 0], 'pregunta3', celdas['pregunta3'])
-    mostrar_celda(axs[8, 1], 'pregunta3_si', celdas['pregunta3_si'])
-    mostrar_celda(axs[8, 2], 'pregunta3_no', celdas['pregunta3_no'])
+    mostrar_celda_grilla(axs[8, 0], 'pregunta3', celdas['pregunta3'])
+    mostrar_celda_grilla(axs[8, 1], 'pregunta3_si', celdas['pregunta3_si'])
+    mostrar_celda_grilla(axs[8, 2], 'pregunta3_no', celdas['pregunta3_no'])
 
-    mostrar_celda(axs[9, 0], 'comentario', celdas['comentario'])
+    mostrar_celda_grilla(axs[9, 0], 'comentario', celdas['comentario'])
     ax_comentario_valor = plt.subplot2grid((10, 3), (9, 1), colspan=2)
-    mostrar_celda(ax_comentario_valor, 'comentario_valor', celdas['comentario_valor'])
+    mostrar_celda_grilla(ax_comentario_valor, 'comentario_valor', celdas['comentario_valor'])
 
     plt.tight_layout()
     plt.subplots_adjust(top=0.95, hspace=0.9)
@@ -168,42 +186,37 @@ def mostrar_formulario_desarmado(celdas):
     plt.show()
 
 if __name__ == '__main__':
+    mostrar_pasos = False
     figura_flag = False
     segmentos_flag = False
     vertices_flag = False
-    celdas_flag = True
-    
-    img, mascara, vert, hor = detectar_lineas(
-        'formulario_01.png', 180, 170, 200)
-    img_dummy = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    segmentos_ver = encontrar_segmentos(mascara, vert, 'vertical', 30)
-    segmentos_hor = encontrar_segmentos(mascara, hor, 'horizontal', 30)
-    vertices = encontrar_intersecciones(segmentos_hor, segmentos_ver)
-    celdas = encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2)
-    color_horizontal = (255, 0, 0)  # Azul
-    grosor_linea = 1
-    
-    if (segmentos_flag):
-        for y, segs in segmentos_hor.items():
-            for x_start, x_end in segs:
-                cv2.line(img_dummy, (x_start, y), (x_end, y),
-                         color_horizontal, grosor_linea)
+    celdas_flag = False
+    formularios = ['formulario_01.png', 'formulario_02.png', 'formulario_03.png','formulario_04.png','formulario_05.png']
+   
+    for formulario in formularios:
+        img, mascara, vert, hor = detectar_lineas(formulario, 180, 170, 200)
+        segmentos_horizontales = encontrar_segmentos(mascara, hor, 'horizontal', 30)
+        segmentos_verticales = encontrar_segmentos(mascara, vert, 'vertical', 30)
+        vertices_form = encontrar_intersecciones(segmentos_horizontales, segmentos_verticales)
+        celdas = encontrar_celdas(img, segmentos_horizontales, segmentos_verticales, margen=2)
+        
+        if (mostrar_pasos):
+            img_para_dibujar = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) #type: ignore
+            if (segmentos_flag):
+                dibujar_segmentos_horizontales(img_para_dibujar, segmentos_horizontales, color=(255,0,0))
+                dibujar_segmentos_verticales(img_para_dibujar, segmentos_verticales, color=(0,0,255))
 
-        color_vertical = (0, 0, 255)  # Rojo
-        for x, segs in segmentos_ver.items():
-            for y_start, y_end in segs:
-                cv2.line(img_dummy, (x, y_start), (x, y_end),
-                         color_vertical, grosor_linea)
-    if (vertices_flag):
-        for x, y in vertices:
-            cv2.circle(img_dummy, (x, y), radius=3,
-                       color=(0, 255, 0), thickness=-1)
-
-    if (figura_flag):
-        plt.figure(figsize=(12, 12))
-        plt.imshow(cv2.cvtColor(img_dummy, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
+            if (vertices_flag):
+                dibujar_vertices(img_para_dibujar, vertices_form, color=(0,255,0), radio=2)
+                
+            if (figura_flag):
+                plt.figure(figsize=(12, 12))
+                plt.imshow(cv2.cvtColor(img_para_dibujar, cv2.COLOR_BGR2RGB))
+                plt.title(f"Resultado de {formulario}")
+                plt.axis('off')
+                plt.show()
+            
+            if(celdas_flag):
+                mostrar_formulario_desarmado(celdas)
+            
     
-    if(celdas_flag):
-        mostrar_formulario_desarmado(celdas)
