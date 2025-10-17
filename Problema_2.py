@@ -190,12 +190,17 @@ def contar_espacios_y_palabras(celdas, identificador):
     _, binarizada = cv2.threshold(celdas[identificador], 180, 255, cv2.THRESH_BINARY_INV)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S) #type: ignore
     componentes = stats[1:]
-    componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
     
+    if len(componentes) == 0:
+        return 0, 0, 0
+    
+    componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
+
     distancias = []
     media = 0.
     desvio = 0.
     umbral_dinamico = 0.
+    cantidad_espacios = 0
     for i in range(len(componentes_ordenados) - 1):
         fin_actual = componentes_ordenados[i, cv2.CC_STAT_LEFT] + componentes_ordenados[i, cv2.CC_STAT_WIDTH]
         inicio_siguiente = componentes_ordenados[i+1, cv2.CC_STAT_LEFT]
@@ -204,19 +209,16 @@ def contar_espacios_y_palabras(celdas, identificador):
             distancias.append(distancia)
             
     if not distancias:
-        return 0, 0, 0
-    else: 
-        distancias = np.array(distancias)
-        media = np.mean(distancias)
-        desvio = np.std(distancias)
-        if desvio < media * 0.5: 
-            umbral_dinamico = media * 2.5 
-        else:
-            umbral_dinamico = media + 2 * desvio
-        cantidad_espacios = np.sum(distancias > umbral_dinamico)
-        
-    if num_labels and not cantidad_espacios:
         return num_labels-1, 1, 0
+    
+    distancias = np.array(distancias)
+    mediana = np.median(distancias)
+    mad = np.median(np.abs(distancias - np.median(distancias)))
+    if mad == 0:
+        umbral_dinamico = mediana * 2.5
+    else:
+        umbral_dinamico = mediana + 3 * mad
+    cantidad_espacios = np.sum(distancias > umbral_dinamico)
     
     return num_labels-1, cantidad_espacios+1, cantidad_espacios
 
@@ -255,7 +257,7 @@ if __name__ == '__main__':
             if(celdas_flag):
                 mostrar_formulario_desarmado(celdas)
                 
-        campo = 'pregunta1_si'
+        campo = 'nombre_valor'
         num_caracteres, num_palabras, num_espacios  = contar_espacios_y_palabras(celdas,campo)
         print('----------------------------------')
         print(f'Formulario: {formulario}')
