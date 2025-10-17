@@ -2,82 +2,72 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
-def encontrar_tramos(bin_linea: np.ndarray, min_len: int = 10):
+def extraer_componentes(celda, th_area_frac=0.002):
     """
-    bin_linea: vector booleano 1D (fila o columna de la máscara)
-    min_len: longitud mínima del tramo para considerarlo línea real
-    Devuelve: lista de (inicio, fin) inclusive-exclusivo en índices
+    Etiqueta y filtra componentes pequeñas.
+    th_area_frac es fracción del área de la celda para definir umbral mínimo.
+    Devuelve (stats_filtrados_ordenados_x, centroids_filtrados).
     """
-    # Convertimos a int para usar diff
-    a = bin_linea.astype(np.uint8)
-    # Detectar bordes de tramos: 0->1 (inicio), 1->0 (fin)
-    da = np.diff(a, prepend=0, append=0)
-    inicios = np.where(da == 1)[0]
-    fines   = np.where(da == -1)[0]
-    # Filtrar por longitud mínima
-    tramos = []
-    for s, e in zip(inicios, fines):
-        if (e - s) >= min_len:
-            tramos.append((s, e))  # [s, e)
-    return tramos
+    h, w = celda.shape
+    num, labels, stats, cents = cv2.connectedComponentsWithStats(celda, 8, cv2.CV_32S) #type: ignore
 
-if __name__ == '__main__':
-    img = cv2.imread(filename='formulario_vacio.png', flags=cv2.IMREAD_GRAYSCALE)
-    img_para_dibujar = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    # stats: [x, y, width, height, area]; fila 0 = fondo
+    stats = stats[1:]
+    cents = cents[1:]
 
-    # 1) Umbral simple (líneas oscuras sobre fondo claro)
-    mascara_umbral = img < 160  # bool
+    th_area = th_area_frac * (h * w)
+    ix = stats[:, -1] > th_area
 
-    # 2) Proyecciones para elegir filas/columnas candidatas
-    proyeccion_vertical = np.sum(mascara_umbral, axis=0)   # por columnas (x)
-    proyeccion_horizontal = np.sum(mascara_umbral, axis=1) # por filas (y)
+    stats_f = stats[ix]
+    cents_f = cents[ix]
 
-    umbral_vertical = 170
-    umbral_horizontal = 250
+    # Ordenar por x (izq->der)
+    order = np.argsort(stats_f[:, 0])
+    return stats_f[order], cents_f[order]
 
-    coord_x_lineas = np.where(proyeccion_vertical > umbral_vertical)[0]  # columnas candidatas
-    coord_y_lineas = np.where(proyeccion_horizontal > umbral_horizontal)[0]  # filas candidatas
+def contar_palabras_y_chars(stats, gap_factor=1.8):
+    """
+    A partir de las bounding boxes (ordenadas por x), separa en 'palabras'
+    usando un gap grande respecto del gap mediano.
+    Devuelve (n_palabras, n_chars, cortes_palabras)
+    """
+    if len(stats) == 0:
+        return 0, 0, []
 
-    alto, ancho, _ = img_para_dibujar.shape
-    color_rojo = (0, 0, 255)
-    grosor_linea = 1
+    # extremos x de cada componente
+    xs = stats[:, 0]
+    xe = stats[:, 0] + stats[:, 2]
 
-    # Parámetros de limpieza para evitar ruiditos
-    # Longitud mínima de segmento (en píxeles)
-    min_len_h = 20   # horizontales
-    min_len_v = 20   # verticales
+    # gaps entre el fin de una y el inicio de la siguiente
+    gaps = xs[1:] - xe[:-1]
+    if len(gaps) == 0:
+        return 1, len(stats), [(0, len(stats))]
 
-    # 3) Buscar tramos por FILA (horizontales)
-    segmentos_h = []  # (x1, x2, y)
-    for y in coord_y_lineas:
-        fila = mascara_umbral[y, :]              # bool 1D (ancho)
-        tramos = encontrar_tramos(fila, min_len=min_len_h)
-        for x1, x2 in tramos:
-            # Guardar y dibujar sólo ese tramo
-            segmentos_h.append((x1, x2, y))
-            cv2.line(img_para_dibujar, (int(x1), int(y)), (int(x2-1), int(y)), color_rojo, grosor_linea)
+    med = np.median(gaps)
+    umbral_gap = gap_factor * med if med > 0 else np.max(gaps) + 1
 
-    # 4) Buscar tramos por COLUMNA (verticales)
-    segmentos_v = []  # (x, y1, y2)
-    for x in coord_x_lineas:
-        col = mascara_umbral[:, x]               # bool 1D (alto)
-        tramos = encontrar_tramos(col, min_len=min_len_v)
-        for y1, y2 in tramos:
-            segmentos_v.append((x, y1, y2))
-            cv2.line(img_para_dibujar, (int(x), int(y1)), (int(x), int(y2-1)), color_rojo, grosor_linea)
+    cortes = [0]
+    for i, g in enumerate(gaps, start=1):
+        if g > umbral_gap:
+            cortes.append(i)
+    cortes.append(len(stats))
 
-    # 5) (Opcional) Si querés medir longitudes:
-    longitudes_h = [(x2 - x1) for (x1, x2, _) in segmentos_h]
-    longitudes_v = [(y2 - y1) for (_, y1, y2) in segmentos_v]
+    tramos = list(zip(cortes[:-1], cortes[1:]))
+    n_palabras = len(tramos)
+    n_chars = len(stats)
+    return n_palabras, n_chars, tramos
 
-    # 6) Mostrar resultado
-    plt.figure(figsize=(12, 12))
-    plt.imshow(cv2.cvtColor(img_para_dibujar, cv2.COLOR_BGR2RGB))
-    plt.title('Segmentos detectados (tramos contiguos) en vez de líneas completas')
-    plt.axis('off')
-    plt.show()
+def binarizar_celda(celda_img):
+    """Devuelve binaria con tinta=1 (blanco) y fondo=0 (negro)."""
+    # Otsu sobre invertida para que la “tinta” quede alta
+    # (si tu fondo es claro y la tinta oscura, invertimos así).
+    _, th = cv2.threshold(255 - celda_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return (th > 0).astype(np.uint8)
 
-    # 7) (Opcional) Tenés posiciones y longitudes en estas listas:
-    # - segmentos_h: lista de (x_inicio, x_fin_exclusivo, y_constante)
-    # - segmentos_v: lista de (x_constante, y_inicio, y_fin_exclusivo)
-    # - longitudes_h / longitudes_v: métricas por segmento
+# b = extraer_componentes(binarizar_celda(celdas['pregunta1_si']))
+# palabras = contar_palabras_y_chars(b[0])
+# print('----------------------------------')
+# print(f'Formulario: {formulario}')
+# print(f"Número de palabras en 'nombre_valor': {palabras[0]}")
+# print(f"Número de caracteres en 'nombre_valor': {palabras[1]}")
+# print(f"Cortes de palabras (índices de caracteres): {palabras}")
