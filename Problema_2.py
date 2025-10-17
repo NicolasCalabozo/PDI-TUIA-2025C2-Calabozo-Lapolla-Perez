@@ -199,7 +199,7 @@ def extraer_componentes(celda, th_area_frac=0.002):
     Devuelve (stats_filtrados_ordenados_x, centroids_filtrados).
     """
     h, w = celda.shape
-    num, labels, stats, cents = cv2.connectedComponentsWithStats(celda, 8, cv2.CV_32S)
+    num, labels, stats, cents = cv2.connectedComponentsWithStats(celda, 8, cv2.CV_32S) #type: ignore
 
     # stats: [x, y, width, height, area]; fila 0 = fondo
     stats = stats[1:]
@@ -247,6 +247,38 @@ def contar_palabras_y_chars(stats, gap_factor=1.8):
     n_chars = len(stats)
     return n_palabras, n_chars, tramos
 
+def contar_espacios_y_palabras(celdas, identificador):
+    _, binarizada = cv2.threshold(celdas[identificador], 180, 255, cv2.THRESH_BINARY_INV)
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S) #type: ignore
+    componentes = stats[1:]
+    componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
+    
+    distancias = []
+    for i in range(len(componentes_ordenados) - 1):
+        fin_actual = componentes_ordenados[i, cv2.CC_STAT_LEFT] + componentes_ordenados[i, cv2.CC_STAT_WIDTH]
+        inicio_siguiente = componentes_ordenados[i+1, cv2.CC_STAT_LEFT]
+        distancia = inicio_siguiente - fin_actual
+        if distancia > 0:
+            distancias.append(distancia)
+    if not distancias:
+        print("El campo esta vacio")
+
+    distancias = np.array(distancias)
+    media = np.mean(distancias)
+    desvio = np.std(distancias)
+
+    if desvio < media * 0.5: 
+        umbral_dinamico = media * 2.5 
+    else:
+        umbral_dinamico = media + 2 * desvio
+
+    print(f"Info distancias: Media = {media:.2f}, Desvio = {desvio:.2f}")
+    print(f"Umbral dinámico calculado para el espacio: > {umbral_dinamico:.2f} píxeles")
+        
+    cantidad_espacios = np.sum(distancias > umbral_dinamico)
+        
+    print(f'La cantidad de espacios es de: {int(cantidad_espacios)}. Entonces se tienen {int(cantidad_espacios)+1} palabras')
+
 if __name__ == '__main__':
     mostrar_pasos = False
     figura_flag = False
@@ -288,36 +320,8 @@ if __name__ == '__main__':
         print(f"Número de palabras en 'nombre_valor': {palabras[0]}")
         print(f"Número de caracteres en 'nombre_valor': {palabras[1]}")
         print(f"Cortes de palabras (índices de caracteres): {palabras}")
+        print('----------------------------------')
+        print('Contador de espacios')
+        contar_espacios_y_palabras(celdas,'mail_valor')
             
     
-def contar_espacios_y_palabras(stats):
-    _, binarizada = cv2.threshold(celdas['nombre_valor'], 180, 255, cv2.THRESH_BINARY_INV)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S)
-    componentes = stats[1:]
-    componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
-
-    distancias = []
-    for i in range(len(componentes_ordenados) - 1):
-        fin_actual = componentes_ordenados[i, cv2.CC_STAT_LEFT] + componentes_ordenados[i, cv2.CC_STAT_WIDTH]
-        inicio_siguiente = componentes_ordenados[i+1, cv2.CC_STAT_LEFT]
-        distancia = inicio_siguiente - fin_actual
-        if distancia > 0:
-            distancias.append(distancia)
-    if not distancias:
-        print("El campo esta vacio")
-
-    distancias = np.array(distancias)
-    media = np.mean(distancias)
-    desvio = np.std(distancias)
-
-    if desvio < media * 0.5: 
-        umbral_dinamico = media * 2.5 
-    else:
-        umbral_dinamico = media + 2 * desvio
-
-    print(f"Info distancias: Media = {media:.2f}, Desvio = {desvio:.2f}")
-    print(f"Umbral dinámico calculado para el espacio: > {umbral_dinamico:.2f} píxeles")
-        
-    cantidad_espacios = np.sum(distancias > umbral_dinamico)
-        
-    print(f'La cantidad de espacios es de: {int(cantidad_espacios)}. Entonces se tienen {int(cantidad_espacios)+1} palabras')
