@@ -187,7 +187,9 @@ def mostrar_formulario_desarmado(celdas):
     
 
 def contar_espacios_y_palabras(celdas, identificador):
-    _, binarizada = cv2.threshold(celdas[identificador], 180, 255, cv2.THRESH_BINARY_INV)
+    #Cambiamos el umbral de 180 a 140 porque estabamos perdiendo muchos pixeles de los puntos
+    #No logrando la detección del punto como un componente
+    _, binarizada = cv2.threshold(celdas[identificador], 140, 255, cv2.THRESH_BINARY_INV)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S) #type: ignore
     componentes = stats[1:]
     
@@ -197,8 +199,7 @@ def contar_espacios_y_palabras(celdas, identificador):
     componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
 
     distancias = []
-    media = 0.
-    desvio = 0.
+
     umbral_dinamico = 0.
     cantidad_espacios = 0
     for i in range(len(componentes_ordenados) - 1):
@@ -210,21 +211,25 @@ def contar_espacios_y_palabras(celdas, identificador):
             
     if not distancias:
         return num_labels-1, 1, 0
-    
-    distancias = np.array(distancias)
-    mediana = np.median(distancias)
-    mad = np.median(np.abs(distancias - np.median(distancias)))
-    if mad == 0:
-        umbral_dinamico = mediana * 2.5
+    if len(distancias) <= 2: 
+        ancho_promedio_caracter = np.mean(componentes_ordenados[:, cv2.CC_STAT_WIDTH])
+        umbral_heuristico = ancho_promedio_caracter * 0.75
+        cantidad_espacios = np.sum(distancias > umbral_heuristico)   
     else:
-        umbral_dinamico = mediana + 3 * mad
-    cantidad_espacios = np.sum(distancias > umbral_dinamico)
+        distancias = np.array(distancias)
+        mediana = np.median(distancias)
+        mad = np.median(np.abs(distancias - np.median(distancias)))
+        if mad == 0:
+            umbral_dinamico = mediana * 2.5
+        else:
+            umbral_dinamico = mediana + 3 * mad
+        cantidad_espacios = np.sum(distancias > umbral_dinamico)
     
     return num_labels-1, cantidad_espacios+1, cantidad_espacios
 
 if __name__ == '__main__':
     mostrar_pasos = False
-    figura_flag = False
+    figura_flag =True
     segmentos_flag = False
     vertices_flag = False
     celdas_flag = True
@@ -257,7 +262,7 @@ if __name__ == '__main__':
             if(celdas_flag):
                 mostrar_formulario_desarmado(celdas)
                 
-        campo = 'nombre_valor'
+        campo = 'pregunta3_no'
         num_caracteres, num_palabras, num_espacios  = contar_espacios_y_palabras(celdas,campo)
         print('----------------------------------')
         print(f'Formulario: {formulario}')
