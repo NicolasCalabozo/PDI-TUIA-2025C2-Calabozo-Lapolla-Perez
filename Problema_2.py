@@ -193,31 +193,32 @@ def contar_espacios_y_palabras(celdas, identificador):
     componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
     
     distancias = []
+    media = 0.
+    desvio = 0.
+    umbral_dinamico = 0.
     for i in range(len(componentes_ordenados) - 1):
         fin_actual = componentes_ordenados[i, cv2.CC_STAT_LEFT] + componentes_ordenados[i, cv2.CC_STAT_WIDTH]
         inicio_siguiente = componentes_ordenados[i+1, cv2.CC_STAT_LEFT]
         distancia = inicio_siguiente - fin_actual
         if distancia > 0:
             distancias.append(distancia)
+            
     if not distancias:
-        print("El campo esta vacio")
-
-    distancias = np.array(distancias)
-    media = np.mean(distancias)
-    desvio = np.std(distancias)
-
-    if desvio < media * 0.5: 
-        umbral_dinamico = media * 2.5 
-    else:
-        umbral_dinamico = media + 2 * desvio
-
-    print(f"Info distancias: Media = {media:.2f}, Desvio = {desvio:.2f}")
-    print(f"Umbral dinámico calculado para el espacio: > {umbral_dinamico:.2f} píxeles")
+        return 0, 0, 0
+    else: 
+        distancias = np.array(distancias)
+        media = np.mean(distancias)
+        desvio = np.std(distancias)
+        if desvio < media * 0.5: 
+            umbral_dinamico = media * 2.5 
+        else:
+            umbral_dinamico = media + 2 * desvio
+        cantidad_espacios = np.sum(distancias > umbral_dinamico)
         
-    cantidad_espacios = np.sum(distancias > umbral_dinamico)
-        
-    print(f'La cantidad de espacios es de: {int(cantidad_espacios)}. Entonces se tienen {int(cantidad_espacios)+1} palabras')
-    print(f"La cantidad de caracteres del campo es: {num_labels-1}")
+    if num_labels and not cantidad_espacios:
+        return num_labels-1, 1, 0
+    
+    return num_labels-1, cantidad_espacios+1, cantidad_espacios
 
 if __name__ == '__main__':
     mostrar_pasos = False
@@ -253,9 +254,15 @@ if __name__ == '__main__':
             
             if(celdas_flag):
                 mostrar_formulario_desarmado(celdas)
-
+                
+        campo = 'pregunta1_si'
+        num_caracteres, num_palabras, num_espacios  = contar_espacios_y_palabras(celdas,campo)
         print('----------------------------------')
-        print('Contador de espacios')
-        contar_espacios_y_palabras(celdas,'pregunta1_si')
+        print(f'Formulario: {formulario}')
+        print(f'Campo: {campo}')
+        print('N° Caracteres: ', num_caracteres)
+        print('N° Palabras: ', num_palabras)
+        print('N° Espacios: ', num_espacios)
+        
             
     
