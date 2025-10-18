@@ -341,7 +341,6 @@ if __name__ == '__main__':
     mostrar_pasos = False
     figura_flag =False
     segmentos_flag = False
-    vertices_flag = False
     celdas_flag = False
     img_salida_flag = True
     estados = {}
@@ -357,7 +356,6 @@ if __name__ == '__main__':
         img, mascara, vert, hor = encontrar_lineas(formulario, 180, 170, 200)
         segmentos_horizontales = encontrar_segmentos(mascara, hor, 'horizontal', 30)
         segmentos_verticales = encontrar_segmentos(mascara, vert, 'vertical', 30)
-        vertices_form = encontrar_intersecciones(segmentos_horizontales, segmentos_verticales)
         celdas = encontrar_celdas(img, segmentos_horizontales, segmentos_verticales, margen=2)
         estados[id_formulario] = validacion(celdas, id_formulario)
         if (mostrar_pasos):
@@ -366,9 +364,6 @@ if __name__ == '__main__':
                 dibujar_segmentos_horizontales(img_para_dibujar, segmentos_horizontales, color=(255,0,0))
                 dibujar_segmentos_verticales(img_para_dibujar, segmentos_verticales, color=(0,0,255))
 
-            if (vertices_flag):
-                dibujar_vertices(img_para_dibujar, vertices_form, color=(0,255,0), radio=2)
-                
             if (figura_flag):
                 plt.figure(figsize=(12, 12))
                 plt.imshow(cv2.cvtColor(img_para_dibujar, cv2.COLOR_BGR2RGB))
