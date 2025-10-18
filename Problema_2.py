@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 
-def detectar_lineas(nombre_archivo, umbral_mascara, umbral_vert, umbral_hor):
+def encontrar_lineas(nombre_archivo, umbral_mascara, umbral_vert, umbral_hor):
     img = cv2.imread(filename=nombre_archivo, flags=cv2.IMREAD_GRAYSCALE)
     mascara_umbral = img < umbral_mascara  # type: ignore
     # Sumamos los True en las columnas para generar un vector que nos diga
@@ -19,10 +19,7 @@ def detectar_lineas(nombre_archivo, umbral_mascara, umbral_vert, umbral_hor):
 
 
 def encontrar_segmentos(mascara_umbral, coordenadas, eje='horizontal', min_largo=10):
-    """
-    Encuentra segmentos de línea a lo largo de un eje específico,
-    filtrando aquellos que son más cortos que min_largo.
-    """
+
     segmentos_dict = {}
     linea_actual = []
     for coord in coordenadas:
@@ -53,25 +50,6 @@ def encontrar_segmentos(mascara_umbral, coordenadas, eje='horizontal', min_largo
 
     return segmentos_dict
 
-
-def encontrar_intersecciones(segmentos_hor, segmentos_ver):
-    """
-    Encuentra los puntos (x, y) donde los segmentos horizontales y verticales se cruzan.
-    """
-    vertices = []
-    # Iteramos sobre cada línea horizontal y sus segmentos
-    for y, segs_horizontales in segmentos_hor.items():
-        for x_start, x_end in segs_horizontales:
-            # Ahora, iteramos sobre cada línea vertical y sus segmentos
-            for x, segs_verticales in segmentos_ver.items():
-                for y_start, y_end in segs_verticales:
-
-                    # Esta es la condición clave:
-                    if (x_start <= x <= x_end) and (y_start <= y <= y_end):
-                        vertices.append((x, y))
-
-    return vertices
-
 def dibujar_segmentos_horizontales(imagen, segmentos_hor, color=(255, 0, 0), grosor=2):
     for y, segs in segmentos_hor.items():
         for x_inicio, x_fin in segs:
@@ -82,9 +60,6 @@ def dibujar_segmentos_verticales(imagen, segmentos_ver, color=(0, 0, 255), groso
         for y_inicio, y_fin in segs:
             cv2.line(imagen, (x, y_inicio), (x, y_fin), color, grosor)
 
-def dibujar_vertices(imagen, vertices, color=(0, 255, 0), radio=3):
-    for x, y in vertices:
-        cv2.circle(imagen, (x, y), radius=radio, color=color, thickness=-1) # thickness=-1 rellena el círculo
 
 def encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2):
     filas = []
@@ -135,9 +110,6 @@ def mostrar_celda_grilla(ax, titulo, imagen):
     ax.set_yticks([])
 
 def mostrar_formulario_desarmado(celdas):
-    """
-    Muestra todas las celdas extraídas en una grilla que simula el formulario.
-    """
     fig, axs = plt.subplots(10, 3, figsize=(10, 15))
 
     for ax_row in axs:
@@ -186,16 +158,20 @@ def contar_espacios_y_palabras(celda):
     _, binarizada = cv2.threshold(celda, 140, 255, cv2.THRESH_BINARY_INV)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S) #type: ignore
     componentes = stats[1:]
-    
+     
+    #Si no hay componentes tampoco hay espacios ni palabras
     if len(componentes) == 0:
         return 0, 0, 0
     
+    #Ordenamos las componentes mediante el punto superior izquierdo
     componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
 
     distancias = []
 
     umbral_dinamico = 0.
     cantidad_espacios = 0
+    
+    #Iteramos sobre los componentes para encontrar las distancias entre un caracter y el siguiente
     for i in range(len(componentes_ordenados) - 1):
         fin_actual = componentes_ordenados[i, cv2.CC_STAT_LEFT] + componentes_ordenados[i, cv2.CC_STAT_WIDTH]
         inicio_siguiente = componentes_ordenados[i+1, cv2.CC_STAT_LEFT]
@@ -203,14 +179,21 @@ def contar_espacios_y_palabras(celda):
         if distancia > 0:
             distancias.append(distancia)
             
+    #Si no tenemos distancias, es porque tenemos una sola palabra        
     if not distancias:
         return num_labels-1, 1, 0
     
+    #Nuestro caso especial es si tenemos dos distancias solamente, donde nuestro umbral dinamico no funcionaría
     if len(distancias) <= 2: 
+        #Para solucionarlo sacamos la media del ancho de los componentes
         ancho_promedio_caracter = np.mean(componentes_ordenados[:, cv2.CC_STAT_WIDTH])
+        #Utilizamos un umbral para encontrar la cantidad de espacios con tamaño mayor
+        #al 75% del promedio de los anchos de los componentes
         umbral_heuristico = ancho_promedio_caracter * 0.75
         cantidad_espacios = np.sum(distancias > umbral_heuristico)   
     else:
+        #Para tres componentes o más, utilizamos el MAD para encontrar
+        #cuales distancias entre caracteres son atípicas y así encontrar la cantidad de espacios
         distancias = np.array(distancias)
         mediana = np.median(distancias)
         mad = np.median(np.abs(distancias - np.median(distancias)))
@@ -220,6 +203,8 @@ def contar_espacios_y_palabras(celda):
             umbral_dinamico = mediana + 3 * mad
         cantidad_espacios = np.sum(distancias > umbral_dinamico)
     
+    #Llegado a este punto, sabemos que la cantidad de palabras es una más que la cantidad de espacios
+    #Que nuestras componentes son todas menos el fondo, y la cantidad de espacios la calculada por nuestro método
     return num_labels-1, cantidad_espacios+1, cantidad_espacios
 
 def validacion_nombre(celda):
@@ -265,6 +250,13 @@ def validacion_preguntas(celda_si, celda_no):
     return "MAL"
 
 def validacion(celdas, id):
+    '''
+    Función que genera un diccionario con las validaciones de cada celda del formulario
+    
+    id: identificador del formulario
+    tipo_formulario: [A,B]
+    El resto de las variables asumen los valores: ['OK','MAL]
+    '''
     estados = {}
     estados['id'] = id
     if id in ['01','02','03']:
@@ -282,6 +274,10 @@ def validacion(celdas, id):
     return estados
 
 def estado_formulario(estados):
+    '''
+    Función que encuentra el estado general del formulario
+    Si uno de los campos es 'MAL', es considerado inválido
+    '''
     aux = list(estados.values())
     for value in aux[2:]:
         if value != 'OK':
@@ -358,7 +354,7 @@ if __name__ == '__main__':
     for formulario in formularios:
         id_formulario = formulario.split(sep="_")[1][:2]
         id_formularios.append(id_formulario)
-        img, mascara, vert, hor = detectar_lineas(formulario, 180, 170, 200)
+        img, mascara, vert, hor = encontrar_lineas(formulario, 180, 170, 200)
         segmentos_horizontales = encontrar_segmentos(mascara, hor, 'horizontal', 30)
         segmentos_verticales = encontrar_segmentos(mascara, vert, 'vertical', 30)
         vertices_form = encontrar_intersecciones(segmentos_horizontales, segmentos_verticales)
