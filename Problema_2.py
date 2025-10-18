@@ -282,12 +282,65 @@ def validacion(celdas, id):
     return estados
 
 def estado_formulario(estados):
-    for _, value in estados.items():
+    aux = list(estados.values())
+    for value in aux[2:]:
         if value != 'OK':
             return False
     return True
 
+def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
+    """
+    Crea una figura que muestra la celda "Nombre y Apellido" de cada formulario
+    con un indicador de texto (Círculo verde para OK, X roja para MAL) usando Matplotlib.
     
+    Args:
+        lista_celdas_nombre (list): Lista de las imágenes (arrays) de las celdas 'nombre_valor'.
+        lista_estados_generales (list): Lista de strings ('OK' o 'MAL') con el estado de cada formulario.
+    """
+    
+    num_formularios = len(lista_celdas_nombre)
+    
+    # 1. Creamos una grilla de subplots, uno para cada formulario
+    fig, axes = plt.subplots(num_formularios, 1, figsize=(num_formularios * 4, 4))
+    
+    # Si solo hay un formulario, 'axes' no es un array, lo convertimos
+    if num_formularios == 1:
+        axes = [axes]
+        
+    # 2. Iteramos sobre los ejes, las celdas y sus estados
+    for ax, celda, estado in zip(axes, lista_celdas_nombre, lista_estados_generales):
+        
+        # 3. Mostramos la imagen de la celda en escala de grises
+        ax.imshow(celda, cmap='gray', vmin = 0, vmax = 255)
+        ax.axis('off') # Ocultamos los ejes
+
+        # 4. Definimos dónde poner el indicador (esquina superior derecha)
+        h, w = celda.shape[:2]
+        x_pos = w * 0.6  # 95% a la derecha
+        y_pos = h * 0.1   # 10% desde arriba
+        #print(f"El estado es: {estado}")
+        # 5. Dibujamos el indicador (Círculo o X) usando ax.text
+        if estado:
+            # Ponemos un círculo verde
+            ax.text(x_pos, y_pos, 'O', 
+                    color='green', 
+                    ha='right', 
+                    va='top', 
+                    fontweight='bold', 
+                    fontsize=15)
+        else:
+            # Ponemos una X roja
+            ax.text(x_pos, y_pos, 'X', 
+                    color='red', 
+                    ha='right', 
+                    va='top', 
+                    fontweight='bold', 
+                    fontsize=15)
+
+    plt.suptitle('Resultados de Validación (Apartado C)', fontsize=16)
+    plt.tight_layout()
+    plt.show()
+
 if __name__ == '__main__':
     mostrar_pasos = False
     figura_flag =False
@@ -298,8 +351,10 @@ if __name__ == '__main__':
     estados = {}
     id_formularios = []
     celdas_nombre = []
+    lista_estados_generales = []
+    estados_completos = {}
+    lista_celdas_nombre = []
     formularios = ['formulario_01.png', 'formulario_02.png', 'formulario_03.png','formulario_04.png','formulario_05.png']
-    plt.figure(figsize=(12, 12))
     for formulario in formularios:
         id_formulario = formulario.split(sep="_")[1][:2]
         id_formularios.append(id_formulario)
@@ -327,5 +382,12 @@ if __name__ == '__main__':
             
             if(celdas_flag):
                 mostrar_formulario_desarmado(celdas)
-    print(estados)
-                        
+                
+        
+        lista_celdas_nombre.append(celdas['nombre_valor'])
+        estado_general = estado_formulario(estados[id_formulario])
+        print(estado_general)
+        lista_estados_generales.append(estado_general)
+    if img_salida_flag:
+        graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales)
+
