@@ -1,0 +1,6 @@
+id,nombre_y_apellido,edad,mail,legajo,pregunta1,pregunta2,pregunta3,comentarios
+01,OK,OK,OK,OK,OK,OK,OK,OK
+02,MAL,MAL,MAL,MAL,MAL,MAL,MAL,MAL
+03,OK,OK,OK,OK,OK,OK,OK,OK
+04,MAL,MAL,MAL,MAL,OK,MAL,MAL,MAL
+05,OK,MAL,OK,OK,MAL,MAL,MAL,OK

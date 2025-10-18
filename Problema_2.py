@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-
+import csv
+from graficar_utils import dibujar_segmentos_horizontales,dibujar_segmentos_verticales,graficar_estado_formulario,mostrar_formulario_desarmado
+from validar_utils import validacion, estado_formulario
 
 def encontrar_lineas(nombre_archivo, umbral_mascara, umbral_vert, umbral_hor):
     img = cv2.imread(filename=nombre_archivo, flags=cv2.IMREAD_GRAYSCALE)
@@ -44,22 +46,11 @@ def encontrar_segmentos(mascara_umbral, coordenadas, eje='horizontal', min_largo
             final = len(linea_actual) - 1
             if (final - inicio) >= min_largo:
                 segmentos_en_linea.append((inicio, final))
-                
+
         if segmentos_en_linea:
             segmentos_dict[coord] = segmentos_en_linea
 
     return segmentos_dict
-
-def dibujar_segmentos_horizontales(imagen, segmentos_hor, color=(255, 0, 0), grosor=2):
-    for y, segs in segmentos_hor.items():
-        for x_inicio, x_fin in segs:
-            cv2.line(imagen, (x_inicio, y), (x_fin, y), color, grosor)
-
-def dibujar_segmentos_verticales(imagen, segmentos_ver, color=(0, 0, 255), grosor=2):
-    for x, segs in segmentos_ver.items():
-        for y_inicio, y_fin in segs:
-            cv2.line(imagen, (x, y_inicio), (x, y_fin), color, grosor)
-
 
 def encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2):
     filas = []
@@ -98,258 +89,27 @@ def encontrar_celdas(img, segmentos_hor, segmentos_ver, margen=2):
     celdas['pregunta3_no'] = filas[8][:, seg_ver[2]+margen: seg_ver[3]-margen]
 
     celdas['comentario'] = filas[9][:, seg_ver[0]+margen: seg_ver[1]-margen]
-    celdas['comentario_valor'] = filas[9][:,seg_ver[1]+margen: seg_ver[3]-margen]
+    celdas['comentario_valor'] = filas[9][:,
+                                          seg_ver[1]+margen: seg_ver[3]-margen]
 
     return celdas
 
-def mostrar_celda_grilla(ax, titulo, imagen):
-    ax.imshow(imagen, cmap='gray', vmin=0, vmax=255)
-    ax.set_title(titulo)
-    ax.axis('on')
-    ax.set_xticks([])
-    ax.set_yticks([])
 
-def mostrar_formulario_desarmado(celdas):
-    fig, axs = plt.subplots(10, 3, figsize=(10, 15))
+def escribir_csv(estados):
+    with open(file='estados_formularios.csv', mode='w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['id','nombre_y_apellido','edad','mail','legajo','pregunta1','pregunta2','pregunta3','comentarios'])
+        for _, estado in estados.items():
+            writer.writerow([estado['id'], estado['nombre'], estado['edad'], estado['mail'], estado['legajo'],
+                            estado['pregunta1'], estado['pregunta2'], estado['pregunta3'], estado['comentario']])
 
-    for ax_row in axs:
-        for ax in ax_row:
-            ax.axis('off')
-
-    mostrar_celda_grilla(axs[1, 0], 'nombre', celdas['nombre'])
-    ax_nombre_valor = plt.subplot2grid((10, 3), (1, 1), colspan=2)
-    mostrar_celda_grilla(ax_nombre_valor, 'nombre_valor', celdas['nombre_valor'])
-    
-    mostrar_celda_grilla(axs[2, 0], 'edad', celdas['edad'])
-    ax_edad_valor = plt.subplot2grid((10, 3), (2, 1), colspan=2)
-    mostrar_celda_grilla(ax_edad_valor, 'edad_valor', celdas['edad_valor'])
-
-    mostrar_celda_grilla(axs[3, 0], 'mail', celdas['mail'])
-    ax_mail_valor = plt.subplot2grid((10, 3), (3, 1), colspan=2)
-    mostrar_celda_grilla(ax_mail_valor, 'mail_valor', celdas['mail_valor'])
-    mostrar_celda_grilla(axs[4, 0], 'legajo', celdas['legajo'])
-    ax_legajo_valor = plt.subplot2grid((10, 3), (4, 1), colspan=2)
-    mostrar_celda_grilla(ax_legajo_valor, 'legajo_valor', celdas['legajo_valor'])
-    mostrar_celda_grilla(axs[6, 0], 'pregunta1', celdas['pregunta1'])
-    mostrar_celda_grilla(axs[6, 1], 'pregunta1_si', celdas['pregunta1_si'])
-    mostrar_celda_grilla(axs[6, 2], 'pregunta1_no', celdas['pregunta1_no'])
-
-    mostrar_celda_grilla(axs[7, 0], 'pregunta2', celdas['pregunta2'])
-    mostrar_celda_grilla(axs[7, 1], 'pregunta2_si', celdas['pregunta2_si'])
-    mostrar_celda_grilla(axs[7, 2], 'pregunta2_no', celdas['pregunta2_no'])
-    
-    mostrar_celda_grilla(axs[8, 0], 'pregunta3', celdas['pregunta3'])
-    mostrar_celda_grilla(axs[8, 1], 'pregunta3_si', celdas['pregunta3_si'])
-    mostrar_celda_grilla(axs[8, 2], 'pregunta3_no', celdas['pregunta3_no'])
-
-    mostrar_celda_grilla(axs[9, 0], 'comentario', celdas['comentario'])
-    ax_comentario_valor = plt.subplot2grid((10, 3), (9, 1), colspan=2)
-    mostrar_celda_grilla(ax_comentario_valor, 'comentario_valor', celdas['comentario_valor'])
-
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.95, hspace=0.9)
-    fig.suptitle('Formulario Desarmado por Celdas', fontsize=16)
-    plt.show()
-    
-
-def contar_espacios_y_palabras(celda):
-    #Cambiamos el umbral de 180 a 140 porque estabamos perdiendo muchos pixeles de los puntos
-    #No logrando la detección del punto como un componente
-    _, binarizada = cv2.threshold(celda, 140, 255, cv2.THRESH_BINARY_INV)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarizada, 8, cv2.CV_32S) #type: ignore
-    componentes = stats[1:]
-     
-    #Si no hay componentes tampoco hay espacios ni palabras
-    if len(componentes) == 0:
-        return 0, 0, 0
-    
-    #Ordenamos las componentes mediante el punto superior izquierdo
-    componentes_ordenados = componentes[componentes[:, cv2.CC_STAT_LEFT].argsort()]
-
-    distancias = []
-
-    umbral_dinamico = 0.
-    cantidad_espacios = 0
-    
-    #Iteramos sobre los componentes para encontrar las distancias entre un caracter y el siguiente
-    for i in range(len(componentes_ordenados) - 1):
-        fin_actual = componentes_ordenados[i, cv2.CC_STAT_LEFT] + componentes_ordenados[i, cv2.CC_STAT_WIDTH]
-        inicio_siguiente = componentes_ordenados[i+1, cv2.CC_STAT_LEFT]
-        distancia = inicio_siguiente - fin_actual
-        if distancia > 0:
-            distancias.append(distancia)
-            
-    #Si no tenemos distancias, es porque tenemos una sola palabra        
-    if not distancias:
-        return num_labels-1, 1, 0
-    
-    #Nuestro caso especial es si tenemos dos distancias solamente, donde nuestro umbral dinamico no funcionaría
-    if len(distancias) <= 2: 
-        #Para solucionarlo sacamos la media del ancho de los componentes
-        ancho_promedio_caracter = np.mean(componentes_ordenados[:, cv2.CC_STAT_WIDTH])
-        #Utilizamos un umbral para encontrar la cantidad de espacios con tamaño mayor
-        #al 75% del promedio de los anchos de los componentes
-        umbral_heuristico = ancho_promedio_caracter * 0.75
-        cantidad_espacios = np.sum(distancias > umbral_heuristico)   
-    else:
-        #Para tres componentes o más, utilizamos el MAD para encontrar
-        #cuales distancias entre caracteres son atípicas y así encontrar la cantidad de espacios
-        distancias = np.array(distancias)
-        mediana = np.median(distancias)
-        mad = np.median(np.abs(distancias - np.median(distancias)))
-        if mad == 0:
-            umbral_dinamico = mediana * 2.5
-        else:
-            umbral_dinamico = mediana + 3 * mad
-        cantidad_espacios = np.sum(distancias > umbral_dinamico)
-    
-    #Llegado a este punto, sabemos que la cantidad de palabras es una más que la cantidad de espacios
-    #Que nuestras componentes son todas menos el fondo, y la cantidad de espacios la calculada por nuestro método
-    return num_labels-1, cantidad_espacios+1, cantidad_espacios
-
-def validacion_nombre(celda):
-    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
-    if (num_palabras >= 2 and num_caracteres <=25):
-        return "OK"
-    return "MAL"
-    
-def validacion_edad(celda):
-    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
-    if (2 <= num_caracteres <=3 and num_espacios == 0):
-        return "OK"
-    return "MAL"
-
-def validacion_mail(celda):
-    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
-    if (num_palabras == 1 and num_caracteres <=25):
-        return "OK"
-    return "MAL"
-
-def validacion_legajo(celda):
-    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
-    if (num_caracteres == 8 and num_palabras == 1):
-        return "OK"
-    return "MAL"
-
-def validacion_comentario(celda):
-    num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(celda)
-    if (num_palabras >= 1 and num_caracteres <= 25):
-        return "OK"
-    return "MAL"
-
-def validacion_preguntas(celda_si, celda_no):
-    num_caracteres_si, num_palabras_si, num_espacios_si = contar_espacios_y_palabras(celda_si)
-    num_caracteres_no, num_palabras_no, num_espacios_no = contar_espacios_y_palabras(celda_no)
-    
-    if (num_caracteres_si == 1 and num_caracteres_no == 0):
-        return "OK"
-    
-    if (num_caracteres_si == 0 and num_caracteres_no == 1):
-        return "OK"
-    
-    return "MAL"
-
-def validacion(celdas, id):
-    '''
-    Función que genera un diccionario con las validaciones de cada celda del formulario
-    
-    id: identificador del formulario
-    tipo_formulario: [A,B]
-    El resto de las variables asumen los valores: ['OK','MAL]
-    '''
-    estados = {}
-    estados['id'] = id
-    if id in ['01','02','03']:
-        estados['tipo_formulario'] = 'A'
-    else:
-        estados ['tipo_formulario'] = 'B'
-    estados['nombre'] = validacion_nombre(celdas['nombre_valor'])
-    estados['edad'] = validacion_edad(celdas['edad_valor'])
-    estados['mail'] = validacion_mail(celdas['mail_valor'])
-    estados['legajo']= validacion_legajo(celdas['legajo_valor'])
-    estados['pregunta1'] = validacion_preguntas(celdas['pregunta1_si'], celdas['pregunta1_no'])
-    estados['pregunta2'] = validacion_preguntas(celdas['pregunta2_si'], celdas['pregunta2_no'])
-    estados['pregunta3'] = validacion_preguntas(celdas['pregunta3_si'], celdas['pregunta3_no'])
-    estados['comentario'] = validacion_comentario(celdas['comentario_valor'])
-    return estados
-
-def estado_formulario(estados):
-    '''
-    Función que encuentra el estado general del formulario
-    Si uno de los campos es 'MAL', es considerado inválido
-    '''
-    aux = list(estados.values())
-    for value in aux[2:]:
-        if value != 'OK':
-            return False
-    return True
-
-def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
-    """
-    Crea una figura que muestra la celda "Nombre y Apellido" de cada formulario
-    con un indicador de texto (Círculo verde para OK, X roja para MAL) usando Matplotlib.
-    
-    Args:
-        lista_celdas_nombre (list): Lista de las imágenes (arrays) de las celdas 'nombre_valor'.
-        lista_estados_generales (list): Lista de strings ('OK' o 'MAL') con el estado de cada formulario.
-    """
-    
-    num_formularios = len(lista_celdas_nombre)
-    
-    # 1. Creamos una grilla de subplots, uno para cada formulario
-    fig, axes = plt.subplots(num_formularios, 1, figsize=(num_formularios * 4, 4))
-    
-    # Si solo hay un formulario, 'axes' no es un array, lo convertimos
-    if num_formularios == 1:
-        axes = [axes]
-        
-    # 2. Iteramos sobre los ejes, las celdas y sus estados
-    for ax, celda, estado in zip(axes, lista_celdas_nombre, lista_estados_generales):
-        
-        # 3. Mostramos la imagen de la celda en escala de grises
-        ax.imshow(celda, cmap='gray', vmin = 0, vmax = 255)
-        ax.axis('off') # Ocultamos los ejes
-
-        # 4. Definimos dónde poner el indicador (esquina superior derecha)
-        h, w = celda.shape[:2]
-        x_pos = w * 0.6  # 95% a la derecha
-        y_pos = h * 0.1   # 10% desde arriba
-        #print(f"El estado es: {estado}")
-        # 5. Dibujamos el indicador (Círculo o X) usando ax.text
-        if estado:
-            # Ponemos un círculo verde
-            ax.text(x_pos, y_pos, 'O', 
-                    color='green', 
-                    ha='right', 
-                    va='top', 
-                    fontweight='bold', 
-                    fontsize=15)
-        else:
-            # Ponemos una X roja
-            ax.text(x_pos, y_pos, 'X', 
-                    color='red', 
-                    ha='right', 
-                    va='top', 
-                    fontweight='bold', 
-                    fontsize=15)
-
-    plt.suptitle('Resultados de Validación (Apartado C)', fontsize=16)
-    plt.tight_layout()
-    plt.show()
 
 if __name__ == '__main__':
-    mostrar_pasos = False
-    figura_flag =False
-    segmentos_flag = False
-    celdas_flag = False
-    img_salida_flag = True
-    estados = {}
-    id_formularios = []
-    celdas_nombre = []
-    lista_estados_generales = []
-    estados_completos = {}
-    lista_celdas_nombre = []
-    formularios = ['formulario_01.png', 'formulario_02.png', 'formulario_03.png','formulario_04.png','formulario_05.png']
+    mostrar_pasos = False; figura_flag = False; segmentos_flag = False; celdas_flag = False
+    img_salida_flag = True; crear_csv = False
+    id_formularios = []; celdas_nombre = []; lista_estados_generales = []; lista_celdas_nombre = []
+    estados = {}; estados_completos = {}
+    formularios = ['formulario_01.png', 'formulario_02.png','formulario_03.png', 'formulario_04.png', 'formulario_05.png']
     for formulario in formularios:
         id_formulario = formulario.split(sep="_")[1][:2]
         id_formularios.append(id_formulario)
@@ -357,12 +117,20 @@ if __name__ == '__main__':
         segmentos_horizontales = encontrar_segmentos(mascara, hor, 'horizontal', 30)
         segmentos_verticales = encontrar_segmentos(mascara, vert, 'vertical', 30)
         celdas = encontrar_celdas(img, segmentos_horizontales, segmentos_verticales, margen=2)
-        estados[id_formulario] = validacion(celdas, id_formulario)
+        lista_celdas_nombre.append(celdas['nombre_valor'])
+        estado = validacion(celdas, id_formulario)
+        estados[id_formulario] = estado
+        estado_general = estado_formulario(estado)
+        lista_estados_generales.append(estado_general)
+
         if (mostrar_pasos):
-            img_para_dibujar = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) #type: ignore
+            img_para_dibujar = cv2.cvtColor(
+                img, cv2.COLOR_GRAY2BGR)  # type: ignore
             if (segmentos_flag):
-                dibujar_segmentos_horizontales(img_para_dibujar, segmentos_horizontales, color=(255,0,0))
-                dibujar_segmentos_verticales(img_para_dibujar, segmentos_verticales, color=(0,0,255))
+                dibujar_segmentos_horizontales(
+                    img_para_dibujar, segmentos_horizontales, color=(255, 0, 0))
+                dibujar_segmentos_verticales(
+                    img_para_dibujar, segmentos_verticales, color=(0, 0, 255))
 
             if (figura_flag):
                 plt.figure(figsize=(12, 12))
@@ -370,15 +138,13 @@ if __name__ == '__main__':
                 plt.title(f"Resultado de {formulario}")
                 plt.axis('off')
                 plt.show()
-            
-            if(celdas_flag):
-                mostrar_formulario_desarmado(celdas)
-                
-        
-        lista_celdas_nombre.append(celdas['nombre_valor'])
-        estado_general = estado_formulario(estados[id_formulario])
-        print(estado_general)
-        lista_estados_generales.append(estado_general)
-    if img_salida_flag:
-        graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales)
 
+            if (celdas_flag):
+                mostrar_formulario_desarmado(celdas)
+
+    if img_salida_flag:
+        graficar_estado_formulario(
+            lista_celdas_nombre, lista_estados_generales)
+        
+    if crear_csv:
+        escribir_csv(estados)
