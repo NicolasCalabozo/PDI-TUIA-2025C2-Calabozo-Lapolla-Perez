@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import cv2
 
 def mostrar_celda_grilla(ax, titulo, imagen):
@@ -10,6 +11,9 @@ def mostrar_celda_grilla(ax, titulo, imagen):
 
 
 def mostrar_formulario_desarmado(celdas):
+    '''
+    Función para mostrar el formulario separado por celdas, utiliza una función auxiliar para graficar
+    '''
     fig, axs = plt.subplots(10, 3, figsize=(10, 15))
 
     for ax_row in axs:
@@ -66,7 +70,11 @@ def dibujar_segmentos_verticales(imagen, segmentos_ver, color=(0, 0, 255), groso
             cv2.line(imagen, (x, y_inicio), (x, y_fin), color, grosor)
             
 def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
-
+    '''
+    Función para graficar los estados generales de cada formulario.
+    Marker 'O' en caso de que el formulario esté 'OK' en todas las celdas
+    Marker 'X' en caso de que el formulario tenga al menos un 'MAL' en una de las celdas
+    '''
     num_formularios = len(lista_celdas_nombre)
 
     fig, axes = plt.subplots(
@@ -78,11 +86,13 @@ def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
     for ax, celda, estado in zip(axes, lista_celdas_nombre, lista_estados_generales):
 
         ax.imshow(celda, cmap='gray', vmin=0, vmax=255)
-        ax.axis('off') 
-
+        ax.set_xticks([])
+        ax.set_yticks([])
+        
+        #Posicionamiento relativo de los markers 'O' y 'X'
         h, w = celda.shape[:2]
         x_pos = w * 0.6  
-        y_pos = h * 0.1   
+        y_pos = h * 0.3   
         if estado:
             # Ponemos un círculo verde
             ax.text(x_pos, y_pos, 'O',
@@ -90,7 +100,7 @@ def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
                     ha='right',
                     va='top',
                     fontweight='bold',
-                    fontsize=15)
+                    fontsize=25)
         else:
             # Ponemos una X roja
             ax.text(x_pos, y_pos, 'X',
@@ -98,8 +108,17 @@ def graficar_estado_formulario(lista_celdas_nombre, lista_estados_generales):
                     ha='right',
                     va='top',
                     fontweight='bold',
-                    fontsize=15)
+                    fontsize=25)
 
     plt.suptitle('Resultados de Validación (Apartado C)', fontsize=16)
     plt.tight_layout()
     plt.show()
+    
+def generar_imagen_dummy(ancho=300, alto=100, texto="Formulario C"):
+    '''
+    Función que crea una imagen dummy para ver si nuestra función detecta Formularios tipo C
+    '''
+    imagen_dummy = np.zeros((alto, ancho), dtype=np.uint8)
+    cv2.putText(imagen_dummy, texto, (10, int(alto * 0.7) ),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
+    return imagen_dummy

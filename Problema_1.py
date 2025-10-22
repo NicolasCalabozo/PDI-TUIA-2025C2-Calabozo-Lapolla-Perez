@@ -3,6 +3,13 @@ import matplotlib.pyplot as plt
 import cv2
 
 def ecualizacionLocalHistograma(img, ventana_m: int, ventana_n: int):
+    '''
+    Función para realizar una ecualización local de histograma en una imagen en escala de grises
+    
+    Argumentos necesarios:
+    img: imagen original en escala de grises,
+    ventana_m, ventana_n: tamaño de la ventana (mxn)
+    '''
     #Establecemos el tamaño de borde que vamos a necesitar para el padding
     borde_m = ventana_m // 2
     borde_n = ventana_n // 2
@@ -46,6 +53,9 @@ def mostrar_analisis_ventana(lista_imagenes: list[np.ndarray], lista_titulos: li
     
 if __name__ == '__main__':
     img = cv2.imread(filename='Imagen_con_detalles_escondidos.tif', flags=cv2.IMREAD_GRAYSCALE)
+    
+    #Si se desean agregar más valores para testear, se pueden agregar dentro de la lista de tuplas
+    #Ejemplo: tamaño_ventanas = [(20x51)] generará una única imagen utilizando una ventana de 20x51
     tamaño_ventanas = [(5,5),(21,21),(51,51),(101,101)] #type:ignore
     imgs = []
     titulos = []

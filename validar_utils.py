@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 
 def contar_espacios_y_palabras(celda):
+    '''
+    Función que recibe una celda del formulario y retorna la cantidad de componentes, palabras y espacios
+    '''
     # Cambiamos el umbral de 180 a 140 porque estabamos perdiendo muchos pixeles de los puntos
     # No logrando la detección del punto como un componente
     _, binarizada = cv2.threshold(celda, 140, 255, cv2.THRESH_BINARY_INV)
@@ -40,7 +43,7 @@ def contar_espacios_y_palabras(celda):
         # Para solucionarlo sacamos la media del ancho de los componentes
         ancho_promedio_caracter = np.mean(
             componentes_ordenados[:, cv2.CC_STAT_WIDTH])
-        # Utilizamos un umbral para encontrar la cantidad de espacios con tamaño mayor
+        # Utilizamos un valor umbral para encontrar la cantidad de espacios con tamaño mayor
         # al 75% del promedio de los anchos de los componentes
         umbral_heuristico = ancho_promedio_caracter * 0.75
         cantidad_espacios = np.sum(distancias > umbral_heuristico)
@@ -55,10 +58,12 @@ def contar_espacios_y_palabras(celda):
         else:
             umbral_dinamico = mediana + 3 * mad
         cantidad_espacios = np.sum(distancias > umbral_dinamico)
-
+        
+    caracteres = num_labels-1
+    palabras = cantidad_espacios+1
     # Llegado a este punto, sabemos que la cantidad de palabras es una más que la cantidad de espacios
-    # Que nuestras componentes son todas menos el fondo, y la cantidad de espacios la calculada por nuestro método
-    return num_labels-1, cantidad_espacios+1, cantidad_espacios
+    # Que nuestras componentes son todas menos el fondo, y la cantidad de espacios es la calculada por nuestro método
+    return caracteres, palabras, cantidad_espacios
 
 def validacion_nombre(celda):
     num_caracteres, num_palabras, num_espacios = contar_espacios_y_palabras(
@@ -115,20 +120,21 @@ def validacion_preguntas(celda_si, celda_no):
     return "MAL"
 
 
-def validacion(celdas, id):
+def validacion(celdas, id, tipo_formulario):
     '''
     Función que genera un diccionario con las validaciones de cada celda del formulario
 
-    id: identificador del formulario
-    tipo_formulario: [A,B]
-    El resto de las variables asumen los valores: ['OK','MAL]
+    Argumentos necesarios:
+    celdas: Diccionario con las referencias a las celdas,    
+    id: identificador del formulario,
+    tipo_formulario: [A,B,C]
+    
+    Retorna:
+    estados: Diccionario con llave 'nombre_celda' y valor 'OK' o 'MAL' según el resultado de la validación
     '''
     estados = {}
     estados['id'] = id
-    if id in ['01', '02', '03']:
-        estados['tipo_formulario'] = 'A'
-    else:
-        estados['tipo_formulario'] = 'B'
+    estados['tipo_formulario'] = tipo_formulario
     estados['nombre'] = validacion_nombre(celdas['nombre_valor'])
     estados['edad'] = validacion_edad(celdas['edad_valor'])
     estados['mail'] = validacion_mail(celdas['mail_valor'])
