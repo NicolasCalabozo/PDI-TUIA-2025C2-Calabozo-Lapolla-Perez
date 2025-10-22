@@ -33,8 +33,8 @@ Este repositorio contiene la resolución del Trabajo Práctico N°1 de Procesami
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone [URL_DEL_REPOSITORIO]
-    cd [NOMBRE_DEL_DIRECTORIO]
+    git clone https://github.com/NicolasCalabozo/PDI-TUIA-2025C2-Calabozo-Lapolla-Perez
+    cd PDI-TUIA-2025C2-Calabozo-Lapolla-Perez
     ```
 2.  **Crear un entorno virtual (recomendado):**
     ```bash
