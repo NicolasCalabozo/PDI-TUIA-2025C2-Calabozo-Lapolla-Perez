@@ -1,6 +1,6 @@
 # IA 4.4 Procesamiento de Imágenes - Trabajo Práctico N°1
-* **Facultad:** Facultad de Ciencias Exactas, Ingeniería y Agrimensura (FCEIA)
-* **Carrera:** Tecnicatura Universitaria en Inteligencia Artificial (TUIA)
+* Facultad de Ciencias Exactas, Ingeniería y Agrimensura
+* Tecnicatura Universitaria en Inteligencia Artificial
 
 ## Integrantes
 
@@ -20,7 +20,7 @@ Este repositorio contiene la resolución del Trabajo Práctico N°1 de Procesami
 * `formulario_vacio.png`: Imagen del esquema del formulario (Problema 2).
 * `formulario_XX.png`: Imágenes de los formularios completados (01 a 05) para el Problema 2.
 * `README.md`: Este archivo.
-* *(Opcional: Añadir `requirements.txt`)*
+* `requirements.txt`: Lista todas las librerias externas requeridas por python para ejecutar el trabajo
 
 ## Requisitos Previos
 
@@ -46,13 +46,12 @@ Este repositorio contiene la resolución del Trabajo Práctico N°1 de Procesami
     ```
 3.  **Instalar las dependencias:**
     ```bash
-    pip install opencv-python numpy matplotlib
+    `pip install -r requirements.txt`
     ```
-    *(Si creas un archivo `requirements.txt`, puedes usar `pip install -r requirements.txt`)*
 
 ## Instrucciones de Uso
 
-Asegúrate de tener todas las imágenes necesarias (`.tif`, `.png`) en el mismo directorio que los scripts o en la ruta esperada por el código.
+Asegurarse de tener todas las imágenes necesarias (`.tif`, `.png`) en el mismo directorio que los scripts o en la ruta esperada por el código.
 
 ### Problema 1: Ecualización Local
 
