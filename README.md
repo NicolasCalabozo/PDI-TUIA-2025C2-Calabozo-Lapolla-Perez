@@ -1,6 +1,7 @@
 # IA 4.4 Procesamiento de Imágenes - Trabajo Práctico N°1
-* Facultad de Ciencias Exactas, Ingeniería y Agrimensura
-* Tecnicatura Universitaria en Inteligencia Artificial
+ Facultad de Ciencias Exactas, Ingeniería y Agrimensura
+ 
+ Tecnicatura Universitaria en Inteligencia Artificial
 
 ## Integrantes
 
